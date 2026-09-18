@@ -60,6 +60,66 @@ public final class PedidoRepository {
         }
     }
 
+    public boolean transitionWithEvent(String id, String deviceId, PedidoEstado expected, PedidoEstado next,
+                                       double distance, String detail, Instant timestamp) throws SQLException {
+        try (var connection = dataSource.getConnection()) {
+            boolean previousAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+            try {
+                String update = "UPDATE pedidos SET estado = ?, fecha_actualizacion = ? "
+                    + "WHERE id = ? AND estado = ?";
+                int updated;
+                try (var statement = connection.prepareStatement(update)) {
+                    statement.setString(1, next.name());
+                    statement.setTimestamp(2, Timestamp.from(timestamp));
+                    statement.setString(3, id);
+                    statement.setString(4, expected.name());
+                    updated = statement.executeUpdate();
+                }
+                if (updated == 0) {
+                    connection.rollback();
+                    return false;
+                }
+                String jsonType = connection.getMetaData().getDatabaseProductName().equalsIgnoreCase("PostgreSQL")
+                    ? "JSONB" : "JSON";
+                String insertEvent = "INSERT INTO pedido_eventos (pedido_id, hito, detalle, timestamp, "
+                    + "message_id, event_type, device_id, estado_anterior, estado_nuevo, distancia_destino_m) "
+                    + "VALUES (?, ?, CAST(? AS " + jsonType + "), ?, ?, ?, ?, ?, ?, ?)";
+                try (var statement = connection.prepareStatement(insertEvent)) {
+                    statement.setString(1, id);
+                    statement.setString(2, next.name());
+                    statement.setString(3, detail);
+                    statement.setTimestamp(4, Timestamp.from(timestamp));
+                    statement.setString(5, java.util.UUID.randomUUID().toString());
+                    statement.setString(6, eventType(next));
+                    statement.setString(7, deviceId);
+                    statement.setString(8, expected.name());
+                    statement.setString(9, next.name());
+                    statement.setDouble(10, distance);
+                    statement.executeUpdate();
+                }
+                connection.commit();
+                return true;
+            } catch (SQLException exception) {
+                connection.rollback();
+                if ("23505".equals(exception.getSQLState())) {
+                    return false;
+                }
+                throw exception;
+            } finally {
+                connection.setAutoCommit(previousAutoCommit);
+            }
+        }
+    }
+
+    private static String eventType(PedidoEstado state) {
+        return switch (state) {
+            case CERCA -> "pedido.cerca";
+            case ENTREGADO -> "pedido.entregado";
+            default -> "pedido.estado-cambiado";
+        };
+    }
+
     private Optional<Pedido> findOne(String sql, String value) throws SQLException {
         try (var connection = dataSource.getConnection();
              var statement = connection.prepareStatement(sql)) {

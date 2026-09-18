@@ -27,7 +27,7 @@ class PositionTrackingServiceTest {
         dataSource = RepositoryTestSupport.createDatabase("tracking-" + System.nanoTime());
         pedidos = new PedidoRepository(dataSource);
         posiciones = new PosicionRepository(dataSource);
-        service = new PositionTrackingService(pedidos, posiciones, new EventoRepository(dataSource));
+        service = new PositionTrackingService(pedidos, posiciones);
     }
 
     @Test
@@ -66,10 +66,57 @@ class PositionTrackingServiceTest {
             service.process(position("MSG-5", "repartidor-01", true, "not-a-timestamp")));
     }
 
+    @Test
+    void marksNearWhenPositionEntersArrivalRadius() throws Exception {
+        insertPedido("PED-NEAR", PedidoEstado.EN_CAMINO);
+        assertEquals(PositionResult.NEAR,
+            service.process(position("MSG-NEAR", "repartidor-01", true, "2026-09-02T12:01:00Z")));
+        assertEquals(PedidoEstado.CERCA, pedidos.findById("PED-NEAR").orElseThrow().estado());
+        assertEquals(1, countEvents("PED-NEAR", "CERCA"));
+    }
+
+    @Test
+    void deliversOnSubsequentSlowPositionInsideRadius() throws Exception {
+        insertPedido("PED-DELIVERED", PedidoEstado.CERCA);
+        posiciones.upsert(new org.example.fleet.delivery.model.UltimaPosicion("PED-DELIVERED",
+            "repartidor-01", "MSG-PREVIOUS", -25.2970, -57.6360, 2, 40,
+            Instant.parse("2026-09-02T12:00:30Z")));
+        VehiclePosition stopped = new VehiclePosition("1.0", "MSG-DELIVERED", "repartidor-01",
+            "2026-09-02T12:01:00Z", -25.2971, -57.6362, 2.5, 90, true, Map.of());
+
+        assertEquals(PositionResult.DELIVERED, service.process(stopped));
+        assertEquals(PedidoEstado.ENTREGADO, pedidos.findById("PED-DELIVERED").orElseThrow().estado());
+        assertEquals(1, countEvents("PED-DELIVERED", "ENTREGADO"));
+    }
+
+    @Test
+    void doesNotRegressOrDeliverOutsideRadius() throws Exception {
+        insertPedido("PED-NO-REGRESSION", PedidoEstado.CERCA);
+        VehiclePosition farAway = new VehiclePosition("1.0", "MSG-FAR", "repartidor-01",
+            "2026-09-02T12:01:00Z", -25.40, -57.70, 0, 90, true, Map.of());
+        assertEquals(PositionResult.UPDATED, service.process(farAway));
+        assertEquals(PedidoEstado.CERCA, pedidos.findById("PED-NO-REGRESSION").orElseThrow().estado());
+    }
+
+    @Test
+    void ignoresOutOfOrderPositionWithoutChangingState() throws Exception {
+        insertPedido("PED-STALE", PedidoEstado.EN_CAMINO);
+        posiciones.upsert(new org.example.fleet.delivery.model.UltimaPosicion("PED-STALE", "repartidor-01",
+            "MSG-NEW", -25.40, -57.70, 20, 1000, Instant.parse("2026-09-02T12:02:00Z")));
+        assertEquals(PositionResult.STALE,
+            service.process(position("MSG-OLD", "repartidor-01", true, "2026-09-02T12:01:00Z")));
+        assertEquals(PedidoEstado.EN_CAMINO, pedidos.findById("PED-STALE").orElseThrow().estado());
+        assertEquals("MSG-NEW", posiciones.findByPedidoId("PED-STALE").orElseThrow().messageId());
+    }
+
     private void insertPedido(String id) throws Exception {
+        insertPedido(id, PedidoEstado.RECIBIDO);
+    }
+
+    private void insertPedido(String id, PedidoEstado estado) throws Exception {
         Instant now = Instant.parse("2026-09-02T12:00:00Z");
         pedidos.insert(new Pedido(id, "Juan", "+595972222222", null, "Asunción",
-            -25.2967, -57.6359, 150, "repartidor-01", PedidoEstado.RECIBIDO, now, now));
+            -25.2967, -57.6359, 150, "repartidor-01", estado, now, now));
     }
 
     private int countEvents(String pedidoId, String hito) throws Exception {

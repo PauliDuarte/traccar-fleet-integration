@@ -11,6 +11,7 @@ dependencies {
 
     testImplementation 'com.h2database:h2:2.3.232'
     testImplementation 'org.apache.camel:camel-test-junit5'
+    testImplementation 'org.apache.camel:camel-mock'
 }
 
 application {

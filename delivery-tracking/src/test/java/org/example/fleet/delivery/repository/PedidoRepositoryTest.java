@@ -46,6 +46,23 @@ class PedidoRepositoryTest {
         assertEquals(PedidoEstado.EN_CAMINO, pedidos.findById("PED-2").orElseThrow().estado());
     }
 
+    @Test
+    void rollsBackStateWhenMilestoneCannotBeInserted() throws Exception {
+        pedidos.insert(pedido("PED-ATOMIC"));
+        try (var connection = dataSource.getConnection();
+             var statement = connection.prepareStatement(
+                 "INSERT INTO pedido_eventos (pedido_id, hito, detalle, timestamp) VALUES (?, ?, '{}', ?)")) {
+            statement.setString(1, "PED-ATOMIC");
+            statement.setString(2, "EN_CAMINO");
+            statement.setTimestamp(3, java.sql.Timestamp.from(Instant.now()));
+            statement.executeUpdate();
+        }
+
+        assertFalse(pedidos.transitionWithEvent("PED-ATOMIC", "repartidor-01", PedidoEstado.RECIBIDO,
+            PedidoEstado.EN_CAMINO, 100, "{}", Instant.now()));
+        assertEquals(PedidoEstado.RECIBIDO, pedidos.findById("PED-ATOMIC").orElseThrow().estado());
+    }
+
     private static Pedido pedido(String id) {
         Instant now = Instant.parse("2026-09-02T12:00:00Z");
         return new Pedido(id, "Juan", "+595972222222", "fcm", "Asunción",

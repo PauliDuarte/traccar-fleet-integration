@@ -3,7 +3,6 @@ package org.example.fleet.delivery.service;
 import org.example.fleet.delivery.model.Pedido;
 import org.example.fleet.delivery.model.PedidoEstado;
 import org.example.fleet.delivery.model.UltimaPosicion;
-import org.example.fleet.delivery.repository.EventoRepository;
 import org.example.fleet.delivery.repository.PedidoRepository;
 import org.example.fleet.delivery.repository.PosicionRepository;
 import org.example.fleet.model.VehiclePosition;
@@ -15,13 +14,10 @@ import java.time.format.DateTimeParseException;
 public final class PositionTrackingService {
     private final PedidoRepository pedidos;
     private final PosicionRepository posiciones;
-    private final EventoRepository eventos;
 
-    public PositionTrackingService(PedidoRepository pedidos, PosicionRepository posiciones,
-                                   EventoRepository eventos) {
+    public PositionTrackingService(PedidoRepository pedidos, PosicionRepository posiciones) {
         this.pedidos = pedidos;
         this.posiciones = posiciones;
-        this.eventos = eventos;
     }
 
     public PositionResult process(VehiclePosition position) throws SQLException {
@@ -34,17 +30,31 @@ public final class PositionTrackingService {
         }
 
         Instant gpsTimestamp = Instant.parse(position.timestamp());
+        var previousPosition = posiciones.findByPedidoId(pedido.id());
+        if (previousPosition.isPresent() && !gpsTimestamp.isAfter(previousPosition.get().timestamp())) {
+            return PositionResult.STALE;
+        }
         double distance = Haversine.distanceMeters(
             position.latitude(), position.longitude(), pedido.latDestino(), pedido.lonDestino());
         posiciones.upsert(new UltimaPosicion(pedido.id(), position.deviceId(), position.messageId(),
             position.latitude(), position.longitude(), position.speedKmh(), distance, gpsTimestamp));
 
+        String detail = detail(position, distance);
         if (pedido.estado() == PedidoEstado.RECIBIDO
-            && pedidos.updateEstado(pedido.id(), PedidoEstado.RECIBIDO, PedidoEstado.EN_CAMINO, gpsTimestamp)) {
-            String detail = "{\"message_id\":\"" + escape(position.messageId())
-                + "\",\"device_id\":\"" + escape(position.deviceId()) + "\"}";
-            eventos.insertIfAbsent(pedido.id(), PedidoEstado.EN_CAMINO.name(), detail, gpsTimestamp);
+            && pedidos.transitionWithEvent(pedido.id(), position.deviceId(), PedidoEstado.RECIBIDO,
+                PedidoEstado.EN_CAMINO, distance, detail, gpsTimestamp)) {
             return PositionResult.STARTED;
+        }
+        if (pedido.estado() == PedidoEstado.EN_CAMINO && distance <= pedido.radioLlegadaM()
+            && pedidos.transitionWithEvent(pedido.id(), position.deviceId(), PedidoEstado.EN_CAMINO,
+                PedidoEstado.CERCA, distance, detail, gpsTimestamp)) {
+            return PositionResult.NEAR;
+        }
+        if (pedido.estado() == PedidoEstado.CERCA && distance <= pedido.radioLlegadaM()
+            && position.speedKmh() <= 3 && previousPosition.isPresent()
+            && pedidos.transitionWithEvent(pedido.id(), position.deviceId(), PedidoEstado.CERCA,
+                PedidoEstado.ENTREGADO, distance, detail, gpsTimestamp)) {
+            return PositionResult.DELIVERED;
         }
         return PositionResult.UPDATED;
     }
@@ -70,5 +80,11 @@ public final class PositionTrackingService {
 
     private static String escape(String value) {
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String detail(VehiclePosition position, double distance) {
+        return "{\"message_id\":\"" + escape(position.messageId())
+            + "\",\"device_id\":\"" + escape(position.deviceId())
+            + "\",\"distancia_destino_m\":" + distance + "}";
     }
 }

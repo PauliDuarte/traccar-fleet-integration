@@ -3,6 +3,7 @@ package org.example.fleet.delivery.routes;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.junit5.CamelTestSupport;
 import org.example.fleet.delivery.model.Pedido;
 import org.example.fleet.delivery.model.PedidoEstado;
@@ -30,8 +31,8 @@ class VehiclePositionRouteTest extends CamelTestSupport {
         Instant now = Instant.parse("2026-09-02T12:00:00Z");
         pedidos.insert(new Pedido("PED-ROUTE", "Juan", "+595972222222", null, null,
             -25.2967, -57.6359, 150, "repartidor-01", PedidoEstado.RECIBIDO, now, now));
-        var service = new PositionTrackingService(pedidos, posiciones, new EventoRepository(dataSource));
-        return new VehiclePositionRoute(service, "direct:test-positions");
+        var service = new PositionTrackingService(pedidos, posiciones);
+        return new VehiclePositionRoute(service, "direct:test-positions", "mock:integration-errors");
     }
 
     @Test
@@ -51,6 +52,18 @@ class VehiclePositionRouteTest extends CamelTestSupport {
         template.request("direct:test-positions", value ->
             value.getMessage().setBody(new ObjectMapper().writeValueAsString(position)));
         assertTrue(posiciones.findByPedidoId("PED-ROUTE").isEmpty());
+    }
+
+    @Test
+    void sendsMalformedPayloadToSanitizedErrorChannelAfterRedelivery() throws Exception {
+        MockEndpoint errors = getMockEndpoint("mock:integration-errors");
+        errors.expectedMessageCount(1);
+        template.sendBody("direct:test-positions", "{not-json");
+        MockEndpoint.assertIsSatisfied(context);
+        var error = errors.getExchanges().getFirst().getMessage()
+            .getBody(org.example.fleet.delivery.error.IntegrationError.class);
+        assertEquals("MENSAJE_INVALIDO", error.tipo());
+        assertEquals("vehicle.positions", error.origen());
     }
 
     private static VehiclePosition position(String messageId, boolean valid) {
