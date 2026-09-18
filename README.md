@@ -1,5 +1,9 @@
 # Traccar → Camel → Artemis (AMQP) Fleet Integration Example
 
+## Desafío 3: seguimiento de pedidos delivery
+
+Extensión universitaria desarrollada por Ana Paula Duarte y Steven Gracia Ayala. La fase actual de ANA incorpora la base del servicio `delivery-tracking` y PostgreSQL, reutilizando las posiciones GPS reales que Traccar normaliza y publica en `vehicle.positions`. Las transiciones y notificaciones asignadas a fases posteriores no se consideran terminadas todavía.
+
 A practical example demonstrating real-time vehicle fleet tracking data integration using Apache Camel as the messaging integrator, connecting Traccar (GPS tracking server) to ActiveMQ Artemis (message broker) via AMQP 1.0 protocol.
 
 ## Architecture Overview

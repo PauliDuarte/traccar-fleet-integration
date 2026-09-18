@@ -1,4 +1,25 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres-delivery
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-delivery}
+      POSTGRES_USER: ${POSTGRES_USER:-delivery}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-delivery123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - delivery-postgres-data:/var/lib/postgresql/data
+      - ./delivery-tracking/src/main/resources/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - fleet-net
+    restart: unless-stopped
+
   artemis:
     image: apache/activemq-artemis:latest-alpine
     container_name: artemis-fleet
@@ -97,6 +118,34 @@ services:
       - fleet-net
     restart: unless-stopped
 
+  delivery-tracking:
+    build:
+      context: .
+      dockerfile: delivery-tracking/Dockerfile
+      additional_contexts:
+        m2-cache: ${HOME}/.m2
+    container_name: delivery-tracking
+    environment:
+      - ARTEMIS_AMQP_URL=${ARTEMIS_AMQP_URL:-amqp://artemis:5672}
+      - ARTEMIS_USER
+      - ARTEMIS_PASSWORD
+      - DELIVERY_DB_URL=${DELIVERY_DB_URL:-jdbc:postgresql://postgres:5432/delivery}
+      - POSTGRES_USER=${POSTGRES_USER:-delivery}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-delivery123}
+    ports:
+      - "8081:8081"
+    depends_on:
+      artemis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - fleet-net
+    restart: unless-stopped
+
 networks:
   fleet-net:
     driver: bridge
+
+volumes:
+  delivery-postgres-data:
