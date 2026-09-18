@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 FROM scratch AS m2-cache
-FROM gradle:9.2.1-jdk21-corretto AS builder
+FROM gradle:9.6.0-jdk21-corretto AS builder
 WORKDIR /build
 RUN chown gradle:gradle /build
 

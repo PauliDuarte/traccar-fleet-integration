@@ -266,7 +266,7 @@ traccar-fleet-integration/
 - **Apache Artemis Jackarta 2.31.2** — AMQP wire protocol
 - **Traccar 5.x** — Open-source GPS tracking server
 - **Java 21** — Latest LTS release
-- **Gradle 9.2.1** — Build automation with BuildKit cache support
+- **Gradle 9.6.0** — Build automation with BuildKit cache support
 
 ## Key Design Decisions
 
