@@ -14,15 +14,23 @@ public final class EventoRepository {
 
     public boolean insertIfAbsent(String pedidoId, String hito, String detalle, Instant timestamp)
         throws SQLException {
-        String sql = "INSERT INTO pedido_eventos (pedido_id, hito, detalle, timestamp) "
-            + "VALUES (?, ?, CAST(? AS JSONB), ?) ON CONFLICT (pedido_id, hito) DO NOTHING";
-        try (var connection = dataSource.getConnection();
-             var statement = connection.prepareStatement(sql)) {
-            statement.setString(1, pedidoId);
-            statement.setString(2, hito);
-            statement.setString(3, detalle);
-            statement.setTimestamp(4, Timestamp.from(timestamp));
-            return statement.executeUpdate() == 1;
+        try (var connection = dataSource.getConnection()) {
+            String jsonType = connection.getMetaData().getDatabaseProductName().equalsIgnoreCase("PostgreSQL")
+                ? "JSONB" : "JSON";
+            String sql = "INSERT INTO pedido_eventos (pedido_id, hito, detalle, timestamp) "
+                + "VALUES (?, ?, CAST(? AS " + jsonType + "), ?)";
+            try (var statement = connection.prepareStatement(sql)) {
+                statement.setString(1, pedidoId);
+                statement.setString(2, hito);
+                statement.setString(3, detalle);
+                statement.setTimestamp(4, Timestamp.from(timestamp));
+                return statement.executeUpdate() == 1;
+            } catch (SQLException exception) {
+                if ("23505".equals(exception.getSQLState())) {
+                    return false;
+                }
+                throw exception;
+            }
         }
     }
 }

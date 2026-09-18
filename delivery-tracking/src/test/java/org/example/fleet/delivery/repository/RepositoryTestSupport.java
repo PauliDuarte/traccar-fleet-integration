@@ -5,11 +5,11 @@ import org.h2.jdbcx.JdbcDataSource;
 import javax.sql.DataSource;
 import java.sql.SQLException;
 
-final class RepositoryTestSupport {
+public final class RepositoryTestSupport {
     private RepositoryTestSupport() {
     }
 
-    static DataSource createDatabase(String name) throws SQLException {
+    public static DataSource createDatabase(String name) throws SQLException {
         JdbcDataSource dataSource = new JdbcDataSource();
         dataSource.setURL("jdbc:h2:mem:" + name + ";MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
         try (var connection = dataSource.getConnection(); var statement = connection.createStatement()) {
