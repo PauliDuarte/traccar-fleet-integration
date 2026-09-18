@@ -6,6 +6,7 @@ import org.example.fleet.delivery.repository.PedidoRepository;
 import org.example.fleet.delivery.repository.PosicionRepository;
 import org.example.fleet.delivery.repository.RepartidorRepository;
 import org.example.fleet.delivery.service.PedidoService;
+import org.example.fleet.delivery.service.PositionTrackingService;
 
 import javax.sql.DataSource;
 import java.time.Clock;
@@ -18,11 +19,17 @@ public final class DeliveryRuntime {
     private static final EventoRepository EVENTOS = new EventoRepository(DATA_SOURCE);
     private static final PedidoService PEDIDO_SERVICE = new PedidoService(
         PEDIDOS, REPARTIDORES, POSICIONES, EVENTOS, Clock.systemUTC());
+    private static final PositionTrackingService POSITION_SERVICE = new PositionTrackingService(
+        PEDIDOS, POSICIONES, EVENTOS);
 
     private DeliveryRuntime() {
     }
 
     public static PedidoService pedidoService() {
         return PEDIDO_SERVICE;
+    }
+
+    public static PositionTrackingService positionService() {
+        return POSITION_SERVICE;
     }
 }
