@@ -1,0 +1,18 @@
+description = 'Delivery order tracking from canonical vehicle positions'
+
+dependencies {
+    implementation project(':common')
+
+    implementation 'org.apache.camel:camel-platform-http'
+    implementation 'org.apache.camel:camel-platform-http-main'
+    implementation 'org.apache.camel:camel-sql'
+    implementation 'com.zaxxer:HikariCP:6.2.1'
+    implementation 'org.postgresql:postgresql:42.7.5'
+
+    testImplementation 'com.h2database:h2:2.3.232'
+    testImplementation 'org.apache.camel:camel-test-junit5'
+}
+
+application {
+    mainClass = 'org.example.fleet.delivery.MainApp'
+}
