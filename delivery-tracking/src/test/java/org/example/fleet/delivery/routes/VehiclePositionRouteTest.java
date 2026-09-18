@@ -30,7 +30,7 @@ class VehiclePositionRouteTest extends CamelTestSupport {
         Instant now = Instant.parse("2026-09-02T12:00:00Z");
         pedidos.insert(new Pedido("PED-ROUTE", "Juan", "+595972222222", null, null,
             -25.2967, -57.6359, 150, "repartidor-01", PedidoEstado.RECIBIDO, now, now));
-        var service = new PositionTrackingService(pedidos, posiciones, new EventoRepository(dataSource));
+        var service = new PositionTrackingService(pedidos, posiciones);
         return new VehiclePositionRoute(service, "direct:test-positions");
     }
 

@@ -3,7 +3,6 @@ package org.example.fleet.delivery.service;
 import org.example.fleet.delivery.model.Pedido;
 import org.example.fleet.delivery.model.PedidoEstado;
 import org.example.fleet.delivery.model.UltimaPosicion;
-import org.example.fleet.delivery.repository.EventoRepository;
 import org.example.fleet.delivery.repository.PedidoRepository;
 import org.example.fleet.delivery.repository.PosicionRepository;
 import org.example.fleet.model.VehiclePosition;
@@ -15,13 +14,10 @@ import java.time.format.DateTimeParseException;
 public final class PositionTrackingService {
     private final PedidoRepository pedidos;
     private final PosicionRepository posiciones;
-    private final EventoRepository eventos;
 
-    public PositionTrackingService(PedidoRepository pedidos, PosicionRepository posiciones,
-                                   EventoRepository eventos) {
+    public PositionTrackingService(PedidoRepository pedidos, PosicionRepository posiciones) {
         this.pedidos = pedidos;
         this.posiciones = posiciones;
-        this.eventos = eventos;
     }
 
     public PositionResult process(VehiclePosition position) throws SQLException {
@@ -45,19 +41,19 @@ public final class PositionTrackingService {
 
         String detail = detail(position, distance);
         if (pedido.estado() == PedidoEstado.RECIBIDO
-            && pedidos.transitionWithEvent(pedido.id(), PedidoEstado.RECIBIDO,
-                PedidoEstado.EN_CAMINO, detail, gpsTimestamp)) {
+            && pedidos.transitionWithEvent(pedido.id(), position.deviceId(), PedidoEstado.RECIBIDO,
+                PedidoEstado.EN_CAMINO, distance, detail, gpsTimestamp)) {
             return PositionResult.STARTED;
         }
         if (pedido.estado() == PedidoEstado.EN_CAMINO && distance <= pedido.radioLlegadaM()
-            && pedidos.transitionWithEvent(pedido.id(), PedidoEstado.EN_CAMINO,
-                PedidoEstado.CERCA, detail, gpsTimestamp)) {
+            && pedidos.transitionWithEvent(pedido.id(), position.deviceId(), PedidoEstado.EN_CAMINO,
+                PedidoEstado.CERCA, distance, detail, gpsTimestamp)) {
             return PositionResult.NEAR;
         }
         if (pedido.estado() == PedidoEstado.CERCA && distance <= pedido.radioLlegadaM()
             && position.speedKmh() <= 3 && previousPosition.isPresent()
-            && pedidos.transitionWithEvent(pedido.id(), PedidoEstado.CERCA,
-                PedidoEstado.ENTREGADO, detail, gpsTimestamp)) {
+            && pedidos.transitionWithEvent(pedido.id(), position.deviceId(), PedidoEstado.CERCA,
+                PedidoEstado.ENTREGADO, distance, detail, gpsTimestamp)) {
             return PositionResult.DELIVERED;
         }
         return PositionResult.UPDATED;

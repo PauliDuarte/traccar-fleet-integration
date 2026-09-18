@@ -58,8 +58,8 @@ class PedidoRepositoryTest {
             statement.executeUpdate();
         }
 
-        assertFalse(pedidos.transitionWithEvent("PED-ATOMIC", PedidoEstado.RECIBIDO,
-            PedidoEstado.EN_CAMINO, "{}", Instant.now()));
+        assertFalse(pedidos.transitionWithEvent("PED-ATOMIC", "repartidor-01", PedidoEstado.RECIBIDO,
+            PedidoEstado.EN_CAMINO, 100, "{}", Instant.now()));
         assertEquals(PedidoEstado.RECIBIDO, pedidos.findById("PED-ATOMIC").orElseThrow().estado());
     }
 

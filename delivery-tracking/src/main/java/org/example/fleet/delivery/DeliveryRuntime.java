@@ -19,8 +19,7 @@ public final class DeliveryRuntime {
     private static final EventoRepository EVENTOS = new EventoRepository(DATA_SOURCE);
     private static final PedidoService PEDIDO_SERVICE = new PedidoService(
         PEDIDOS, REPARTIDORES, POSICIONES, EVENTOS, Clock.systemUTC());
-    private static final PositionTrackingService POSITION_SERVICE = new PositionTrackingService(
-        PEDIDOS, POSICIONES, EVENTOS);
+    private static final PositionTrackingService POSITION_SERVICE = new PositionTrackingService(PEDIDOS, POSICIONES);
 
     private DeliveryRuntime() {
     }
@@ -31,5 +30,9 @@ public final class DeliveryRuntime {
 
     public static PositionTrackingService positionService() {
         return POSITION_SERVICE;
+    }
+
+    public static DataSource dataSource() {
+        return DATA_SOURCE;
     }
 }

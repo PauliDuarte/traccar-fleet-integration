@@ -27,7 +27,7 @@ class PositionTrackingServiceTest {
         dataSource = RepositoryTestSupport.createDatabase("tracking-" + System.nanoTime());
         pedidos = new PedidoRepository(dataSource);
         posiciones = new PosicionRepository(dataSource);
-        service = new PositionTrackingService(pedidos, posiciones, new EventoRepository(dataSource));
+        service = new PositionTrackingService(pedidos, posiciones);
     }
 
     @Test
