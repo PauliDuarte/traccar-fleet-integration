@@ -60,6 +60,51 @@ public final class PedidoRepository {
         }
     }
 
+    public boolean transitionWithEvent(String id, PedidoEstado expected, PedidoEstado next,
+                                       String detail, Instant timestamp) throws SQLException {
+        try (var connection = dataSource.getConnection()) {
+            boolean previousAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+            try {
+                String update = "UPDATE pedidos SET estado = ?, fecha_actualizacion = ? "
+                    + "WHERE id = ? AND estado = ?";
+                int updated;
+                try (var statement = connection.prepareStatement(update)) {
+                    statement.setString(1, next.name());
+                    statement.setTimestamp(2, Timestamp.from(timestamp));
+                    statement.setString(3, id);
+                    statement.setString(4, expected.name());
+                    updated = statement.executeUpdate();
+                }
+                if (updated == 0) {
+                    connection.rollback();
+                    return false;
+                }
+                String jsonType = connection.getMetaData().getDatabaseProductName().equalsIgnoreCase("PostgreSQL")
+                    ? "JSONB" : "JSON";
+                String insertEvent = "INSERT INTO pedido_eventos (pedido_id, hito, detalle, timestamp) "
+                    + "VALUES (?, ?, CAST(? AS " + jsonType + "), ?)";
+                try (var statement = connection.prepareStatement(insertEvent)) {
+                    statement.setString(1, id);
+                    statement.setString(2, next.name());
+                    statement.setString(3, detail);
+                    statement.setTimestamp(4, Timestamp.from(timestamp));
+                    statement.executeUpdate();
+                }
+                connection.commit();
+                return true;
+            } catch (SQLException exception) {
+                connection.rollback();
+                if ("23505".equals(exception.getSQLState())) {
+                    return false;
+                }
+                throw exception;
+            } finally {
+                connection.setAutoCommit(previousAutoCommit);
+            }
+        }
+    }
+
     private Optional<Pedido> findOne(String sql, String value) throws SQLException {
         try (var connection = dataSource.getConnection();
              var statement = connection.prepareStatement(sql)) {
