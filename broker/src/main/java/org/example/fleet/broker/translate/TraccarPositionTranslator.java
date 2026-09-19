@@ -16,7 +16,7 @@ public class TraccarPositionTranslator {
 
     public VehiclePosition translate(JsonNode traccarJson) throws Exception {
         JsonNode position = traccarJson.get("position");
-        String deviceId = position.get("deviceId").asText();
+        String deviceId = deviceIdentifier(traccarJson, position);
         double latitude = position.get("latitude").asDouble();
         double longitude = position.get("longitude").asDouble();
         double speedKnots = position.get("speed").asDouble(0);
@@ -48,5 +48,13 @@ public class TraccarPositionTranslator {
             valid,
             attributes
         );
+    }
+
+    private static String deviceIdentifier(JsonNode envelope, JsonNode payload) {
+        JsonNode device = envelope.get("device");
+        if (device != null && device.hasNonNull("uniqueId") && !device.get("uniqueId").asText().isBlank()) {
+            return device.get("uniqueId").asText();
+        }
+        return payload.get("deviceId").asText();
     }
 }

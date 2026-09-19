@@ -47,7 +47,7 @@ public final class PedidoService {
                 request.radioLlegadaM(), request.repartidorDeviceId(), PedidoEstado.RECIBIDO, now, now);
             pedidos.insert(pedido);
             eventos.insertIfAbsent(pedido.id(), PedidoEstado.RECIBIDO.name(), "{}", now);
-            return new PedidoCreatedResponse(pedido.id(), pedido.estado(), pedido.fechaCreacion());
+            return new PedidoCreatedResponse(pedido.id(), pedido.estado(), pedido.fechaCreacion().toString());
         } catch (ApiException exception) {
             throw exception;
         } catch (SQLException exception) {
@@ -64,7 +64,7 @@ public final class PedidoService {
                 .orElseThrow(() -> new ApiException("PEDIDO_NO_ENCONTRADO", "El pedido no existe", 404));
             TrackingPositionResponse position = posiciones.findByPedidoId(pedidoId)
                 .map(value -> new TrackingPositionResponse(value.lat(), value.lon(), value.velocidadKmh(),
-                    value.distanciaDestinoM(), value.timestamp()))
+                    value.distanciaDestinoM(), value.timestamp().toString()))
                 .orElse(null);
             return new TrackingResponse(pedido.id(), pedido.estado(), position);
         } catch (ApiException exception) {

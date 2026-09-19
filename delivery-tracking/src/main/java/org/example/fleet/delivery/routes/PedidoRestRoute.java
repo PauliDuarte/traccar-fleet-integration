@@ -1,5 +1,6 @@
 package org.example.fleet.delivery.routes;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.model.rest.RestBindingMode;
@@ -10,6 +11,7 @@ import org.example.fleet.delivery.api.PedidoRequest;
 import org.example.fleet.delivery.service.PedidoService;
 
 public class PedidoRestRoute extends RouteBuilder {
+    private static final ObjectMapper JSON = new ObjectMapper();
     private final PedidoService service;
     private final boolean exposeHttp;
 
@@ -33,7 +35,13 @@ public class PedidoRestRoute extends RouteBuilder {
             .process(exchange -> {
                 ApiException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, ApiException.class);
                 exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, exception.status());
-                exchange.getMessage().setBody(new ApiError(exception.code(), exception.getMessage()));
+                ApiError error = new ApiError(exception.code(), exception.getMessage());
+                if (exposeHttp) {
+                    exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, "application/json");
+                    exchange.getMessage().setBody(JSON.writeValueAsString(error));
+                } else {
+                    exchange.getMessage().setBody(error);
+                }
             });
 
         if (exposeHttp) {
