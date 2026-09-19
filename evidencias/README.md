@@ -1,21 +1,19 @@
 # Checklist de evidencias manuales
 
-Esta carpeta no contiene capturas generadas o simuladas. Antes de la entrega, tomar las evidencias reales y guardarlas con estos nombres:
+Evidencias reales tomadas durante la validación final del proyecto:
 
-- [ ] `01-docker-compose.png`: siete servicios activos y healthchecks.
-- [ ] `02-gradle-tests.png`: suite Gradle completa en verde.
-- [ ] `03-post-pedido.png`: respuesta de `POST /pedidos`.
-- [ ] `04-db-recibido.png`: pedido persistido en estado `RECIBIDO`.
-- [ ] `05-traccar-position.png`: posición recibida por Traccar/forwarding.
-- [ ] `06-en-camino.png`: transición a `EN_CAMINO`.
-- [ ] `07-cerca.png`: transición a `CERCA`.
-- [ ] `08-entregado.png`: transición a `ENTREGADO`.
-- [ ] `09-tracking-final.png`: respuesta final de `GET /pedidos/{id}/tracking`.
-- [ ] `10-pedido-eventos.png`: eventos, `publicado` y `notificado` en PostgreSQL.
-- [ ] `11-artemis.png`: direcciones/colas relevantes en Artemis.
-- [ ] `12-notificaciones.png`: tres líneas `PUSH SIMULADO`.
-- [ ] `13-idempotencia.png`: un registro por `(pedido_id, hito)` tras reprocesar.
-- [ ] `14-github-commits.png`: historial de commits de las ramas del proyecto.
-- [ ] `15-github-prs.png`: pull requests reales del trabajo colaborativo.
+- [x] `01-docker-compose.png`: siete servicios activos y healthchecks.
+- [x] `02-gradle-tests.png`: suite Gradle completa en verde.
+- [x] `03-post-pedido.png`: respuesta de `POST /pedidos`.
+- [x] `04-db-recibido.png`: pedido persistido en estado `RECIBIDO`.
+- [x] `05-traccar-position.png`: posición recibida por Traccar.
+- [x] `06-en-camino.png`: transición a `EN_CAMINO`.
+- [x] `07-cerca.png`: transición a `CERCA`.
+- [x] `08-entregado.png`: transición a `ENTREGADO`.
+- [x] `09-tracking-final.png`: respuesta final de `GET /pedidos/{id}/tracking`.
+- [x] `10-pedido-eventos.png`: eventos, `publicado` y `notificado` en PostgreSQL.
+- [x] `11-artemis.png`: direcciones y colas relevantes en Artemis.
+- [x] `12-notificaciones.png`: notificaciones PUSH simuladas.
+- [x] `13-idempotencia.png`: un registro por `(pedido_id, hito)`.
 
-Solo enlazar una imagen desde el README principal después de agregar el archivo real.
+Estas evidencias corresponden al flujo end to end validado.
