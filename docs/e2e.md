@@ -1,10 +1,10 @@
-# Prueba E2E real de seguimiento de delivery
+# Prueba integral real de seguimiento de delivery
 
 Este procedimiento recorre la entrada real del sistema:
 
-`OsmAnd -> Traccar -> HTTP forwarding -> broker Camel -> Artemis -> delivery-tracking -> PostgreSQL -> Artemis -> PUSH simulado`.
+`OsmAnd -> Traccar -> reenvío HTTP -> broker Camel -> Artemis -> delivery-tracking -> PostgreSQL -> Artemis -> PUSH simulado`.
 
-Los puertos publicados por defecto evitan colisiones frecuentes con instalaciones locales: PostgreSQL `5433`, Artemis Core `61617`, consola Artemis `8162` y delivery API `8083`. Dentro de la red Compose se conservan los puertos estándar.
+Los puertos publicados por defecto evitan colisiones frecuentes con instalaciones locales: PostgreSQL `5433`, Artemis Core `61617`, consola Artemis `8162` y API de pedidos `8083`. Dentro de la red Compose se conservan los puertos estándar.
 
 ## 1. Preparar un entorno limpio
 
@@ -58,7 +58,7 @@ Debe responder `202` y el pedido queda en `RECIBIDO`.
 
 ## 4. Enviar posiciones por Traccar/OsmAnd
 
-Use timestamps Unix crecientes y cercanos a la hora actual. Este ejemplo usa `T0`; sustitúyalo por el resultado de `date +%s` y sume 10 y 20 para los mensajes siguientes.
+Use marcas de tiempo Unix crecientes y cercanas a la hora actual. Este ejemplo usa `T0`; sustitúyalo por el resultado de `date +%s` y sume 10 y 20 para los mensajes siguientes.
 
 ```bash
 T0=$(date +%s)
@@ -108,7 +108,7 @@ Resultado observado el 18 de septiembre de 2026:
 
 ## 6. Verificar idempotencia y orden temporal
 
-Repita la última URL sin cambiar su timestamp. El pedido debe permanecer `ENTREGADO`, no debe aparecer otro evento ni otro PUSH. También puede verificar la restricción de unicidad:
+Repita la última URL sin cambiar su marca de tiempo. El pedido debe permanecer `ENTREGADO`, no debe aparecer otro evento ni otro PUSH. También puede verificar la restricción de unicidad:
 
 ```bash
 docker compose exec -T postgres psql -U delivery -d delivery -c \
