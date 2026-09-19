@@ -7,7 +7,7 @@ import java.net.http.HttpResponse;
 
 class DeliverySmoke {
     public static void main(String... args) throws Exception {
-        String baseUrl = args.length > 0 ? args[0] : "http://localhost:8081";
+        String baseUrl = args.length > 0 ? args[0] : "http://localhost:8083";
         String orderId = args.length > 1 ? args[1] : "PED-JBANG-SMOKE";
         String body = """
             {
