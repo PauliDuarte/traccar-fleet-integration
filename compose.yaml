@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-delivery}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-delivery123}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - delivery-postgres-data:/var/lib/postgresql/data
       - ./delivery-tracking/src/main/resources/db/init:/docker-entrypoint-initdb.d:ro
@@ -24,16 +24,20 @@ services:
     image: apache/activemq-artemis:latest-alpine
     container_name: artemis-fleet
     environment:
-      - ANONYMOUS_LOGIN=true
-      - ARTEMIS_USER
-      - ARTEMIS_PASSWORD
+      ANONYMOUS_LOGIN: "false"
+      ARTEMIS_USER: ${ARTEMIS_USER:-admin}
+      ARTEMIS_PASSWORD: ${ARTEMIS_PASSWORD:-admin123}
     ports:
-      - "5672:5672"   # AMQP 1.0 acceptor
-      - "61616:61616" # Core/OpenWire acceptor
-      - "1883:1883" # MQTT acceptor
-      - "8161:8161"   # Web console
+      - "${ARTEMIS_AMQP_HOST_PORT:-5672}:5672"   # AMQP 1.0 acceptor
+      - "${ARTEMIS_CORE_HOST_PORT:-61617}:61616" # Core/OpenWire acceptor
+      - "${ARTEMIS_MQTT_HOST_PORT:-1883}:1883" # MQTT acceptor
+      - "${ARTEMIS_CONSOLE_HOST_PORT:-8162}:8161"   # Web console
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8161"]
+      test:
+        [
+          "CMD-SHELL",
+          "/var/lib/artemis-instance/bin/artemis check node --user $${ARTEMIS_USER} --password $${ARTEMIS_PASSWORD} --url tcp://localhost:61616",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -70,9 +74,9 @@ services:
         m2-cache: ${HOME}/.m2
     container_name: broker-fleet
     environment:
-      - ARTEMIS_AMQP_URL=${ARTEMIS_AMQP_URL:-amqp://artemis:5672}
-      - ARTEMIS_USER
-      - ARTEMIS_PASSWORD
+      ARTEMIS_AMQP_URL: ${ARTEMIS_AMQP_URL:-tcp://artemis:61616}
+      ARTEMIS_USER: ${ARTEMIS_USER:-admin}
+      ARTEMIS_PASSWORD: ${ARTEMIS_PASSWORD:-admin123}
     ports:
       - "8080:8080"   # HTTP endpoint for Traccar forwards
     depends_on:
@@ -90,9 +94,9 @@ services:
         m2-cache: ${HOME}/.m2
     container_name: positions-consumer-fleet
     environment:
-      - ARTEMIS_AMQP_URL=${ARTEMIS_AMQP_URL:-amqp://artemis:5672}
-      - ARTEMIS_USER
-      - ARTEMIS_PASSWORD
+      ARTEMIS_AMQP_URL: ${ARTEMIS_AMQP_URL:-tcp://artemis:61616}
+      ARTEMIS_USER: ${ARTEMIS_USER:-admin}
+      ARTEMIS_PASSWORD: ${ARTEMIS_PASSWORD:-admin123}
     depends_on:
       artemis:
         condition: service_healthy
@@ -108,9 +112,9 @@ services:
         m2-cache: ${HOME}/.m2
     container_name: events-consumer-fleet
     environment:
-      - ARTEMIS_AMQP_URL=${ARTEMIS_AMQP_URL:-amqp://artemis:5672}
-      - ARTEMIS_USER
-      - ARTEMIS_PASSWORD
+      ARTEMIS_AMQP_URL: ${ARTEMIS_AMQP_URL:-tcp://artemis:61616}
+      ARTEMIS_USER: ${ARTEMIS_USER:-admin}
+      ARTEMIS_PASSWORD: ${ARTEMIS_PASSWORD:-admin123}
     depends_on:
       artemis:
         condition: service_healthy
@@ -126,14 +130,14 @@ services:
         m2-cache: ${HOME}/.m2
     container_name: delivery-tracking
     environment:
-      - ARTEMIS_AMQP_URL=${ARTEMIS_AMQP_URL:-amqp://artemis:5672}
-      - ARTEMIS_USER
-      - ARTEMIS_PASSWORD
-      - DELIVERY_DB_URL=${DELIVERY_DB_URL:-jdbc:postgresql://postgres:5432/delivery}
-      - POSTGRES_USER=${POSTGRES_USER:-delivery}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-delivery123}
+      ARTEMIS_AMQP_URL: ${ARTEMIS_AMQP_URL:-tcp://artemis:61616}
+      ARTEMIS_USER: ${ARTEMIS_USER:-admin}
+      ARTEMIS_PASSWORD: ${ARTEMIS_PASSWORD:-admin123}
+      DELIVERY_DB_URL: ${DELIVERY_DB_URL:-jdbc:postgresql://postgres:5432/delivery}
+      POSTGRES_USER: ${POSTGRES_USER:-delivery}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-delivery123}
     ports:
-      - "8081:8081"
+      - "${DELIVERY_HTTP_PORT:-8083}:8081"
     depends_on:
       artemis:
         condition: service_healthy

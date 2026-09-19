@@ -17,7 +17,7 @@ public class TraccarEventTranslator {
     public VehicleEvent translate(JsonNode traccarJson) throws Exception {
         JsonNode event = traccarJson.get("event");
 
-        String deviceId = event.get("deviceId").asText();
+        String deviceId = deviceIdentifier(traccarJson, event);
         String eventType = event.get("type").asText();
         long eventTimeMs = event.get("eventTime").asLong();
         String timestamp = eventTimeMs > 0 ? Instant.ofEpochMilli(eventTimeMs).toString() : event.get("eventTime").asText();
@@ -51,5 +51,13 @@ public class TraccarEventTranslator {
             geofenceId,
             attributes
         );
+    }
+
+    private static String deviceIdentifier(JsonNode envelope, JsonNode payload) {
+        JsonNode device = envelope.get("device");
+        if (device != null && device.hasNonNull("uniqueId") && !device.get("uniqueId").asText().isBlank()) {
+            return device.get("uniqueId").asText();
+        }
+        return payload.get("deviceId").asText();
     }
 }

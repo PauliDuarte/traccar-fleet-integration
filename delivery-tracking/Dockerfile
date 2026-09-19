@@ -7,10 +7,10 @@ RUN chown gradle:gradle /build
 COPY --chown=gradle:gradle . ./
 
 RUN --mount=type=bind,from=m2-cache,target=/home/gradle/.m2 \
-    gradle :delivery-tracking:build -x test --no-daemon
+    gradle :delivery-tracking:installDist --no-daemon
 
-FROM amazoncorretto:21-alpine-jre
+FROM amazoncorretto:21-alpine
 WORKDIR /app
-COPY --from=builder /build/delivery-tracking/build/libs/delivery-tracking-1.0.0.jar app.jar
+COPY --from=builder /build/delivery-tracking/build/install/delivery-tracking/ ./
 EXPOSE 8081
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["bin/delivery-tracking"]
